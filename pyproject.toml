@@ -1,0 +1,14 @@
+[project]
+name = "arxiver"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "arxiv>=2.3.1",
+    "langchain-community>=0.4.1",
+    "langchain-core>=1.1.0",
+    "langchain-openai>=1.1.0",
+    "langgraph>=1.0.4",
+    "pypdf>=6.4.0",
+]
