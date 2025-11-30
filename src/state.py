@@ -7,23 +7,24 @@ State management for the Arxiver application.
 from __future__ import annotations
 
 from typing import Any, Dict, List, TypedDict
-from langgraph.graph import StateGraph
-from graph import fetch, explain, answer
+from langgraph.graph import StateGraph, START, END
+from src.graph import fetch, explain, answer
 
 # Define the state structure
 class State(TypedDict, total=False):
-    paper_title: str                   # input / during FetchNode
-    paper: Dict[str, Any]              # after FetchNode
-    explanations: Dict[str, str]       # after ExplainNode
-    questions: List[str]               # input / during Q&A
-    answers: Dict[str, str]            # after QANode
+    mode: str
+    topic: str
+    paper: Dict[str, Any]
+    explanations: str
+    questions: List[str]
+    answers: Dict[str, str]
 
 # Build the state graph
 app = StateGraph(State)
 
 # Define nodes
 app.add_node("fetch",
-             lambda state: {'paper': fetch(state["paper_title"])})
+             lambda state: {'paper': fetch(state["topic"])})
 
 app.add_node("explain",
              lambda state: {'explanations': explain(state["paper"])})
@@ -36,9 +37,9 @@ app.add_node("qa",
                  }})
 
 # Define edges
+app.add_edge(START, "fetch")
 app.add_edge("fetch", "explain")
 app.add_edge("explain", "qa")
-app.add_edge("qa", "END")
-app.add_edge("START", "fetch")
+app.add_edge("qa", END)
 
 graph = app.compile()

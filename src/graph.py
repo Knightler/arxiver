@@ -12,7 +12,7 @@ import logging
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langchain_community.retrievers import ArxivRetriever
+# from langchain_community.retrievers import ArxivRetriever => Not used package
 
 import arxiv
 
@@ -30,38 +30,37 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "")
 
 # Fetches the paper based on the query.
-def fetch(name: str) -> Dict[str, Any]:
+def fetch(topic: str) -> Dict[str, Any]:
   """
-  Fetches the paper from the Arxiv API based on the query.
+  Fetches the latest paper from the Arxiv related to the query.
 
   IO:
-    Input: name (str)
+    Input: query (str)
     Output: paper (Dict[str, Any])
   """
 
-  logger.info(f"Searching arXiv for: {name}")
+  logger.info(f"Searching arXiv for latest paper about: {topic}")
 
-  retriever = ArxivRetriever(
-     load_max_docs=1,
-     get_full_documents=True,
-     arxiv_search=arxiv.Search,
-     arxiv_exceptions=(arxiv.ArxivError,)
+  search = arxiv.Search(
+      query=f'all:"{topic}"',
+      max_results=1,
+      sort_by=arxiv.SortCriterion.SubmittedDate,
   )
 
-  results = retriever.invoke(name)
+  results = list(search.results())
 
   if not results:
       logger.warning("No papers found.")
       raise ValueError("No papers found for the given query.")
 
   paper = results[0]
-  logger.info(f"Fetched paper: {paper.metadata['title']}")
+  logger.info(f"Fetched paper: {paper.title}")
 
   return {
-      "title": paper.metadata["title"],
-      "authors": paper.metadata["authors"],
-      "abstract": paper.metadata["abstract"],
-      "pdf_url": paper.metadata["pdf_url"],
+      "title": paper.title,
+      "authors": [a.name for a in paper.authors],
+      "abstract": paper.summary,
+      "pdf_url": getattr(paper, "pdf_url", "") or "",
   }
 
 
