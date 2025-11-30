@@ -1,7 +1,8 @@
 # src/graph.py
 # type: ignore
 """
-Graph structure for the Arxiver application."""
+Graph structure for the Arxiver application.
+"""
 
 from __future__ import annotations
 
@@ -28,46 +29,43 @@ logging.info("Loading environment variables from .env file")
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "")
 
-# The class which fetches the paper from arXiv.
-class FetchNode:
+# Fetches the paper based on the query.
+def fetch(name: str) -> Dict[str, Any]:
   """
   Fetches the paper from the Arxiv API based on the query.
 
   IO:
-    Input: query (str)
+    Input: name (str)
     Output: paper (Dict[str, Any])
   """
-  def __init__(self):
-    self.retriever = ArxivRetriever(
-      load_max_docs=1,
-      get_full_documents=True,
-      arxiv_search=arxiv.Search,
-      arxiv_exceptions=(arxiv.ArxivError,),
-    )
 
-  # Fetches the paper based on the query.
-  def fetch(self, name: str) -> Dict[str, Any]:
-      logger.info(f"Searching arXiv for: {name}")
+  logger.info(f"Searching arXiv for: {name}")
 
-      results = self.retriever.invoke(name)
+  retriever = ArxivRetriever(
+     load_max_docs=1,
+     get_full_documents=True,
+     arxiv_search=arxiv.Search,
+     arxiv_exceptions=(arxiv.ArxivError,)
+  )
 
-      if not results:
-          logger.warning("No papers found.")
-          raise ValueError("No papers found for the given query.")
+  results = retriever.invoke(name)
 
-      paper = results[0]
-      logger.info(f"Fetched paper: {paper.metadata['title']}")
+  if not results:
+      logger.warning("No papers found.")
+      raise ValueError("No papers found for the given query.")
 
-      return {
-          "title": paper.metadata["title"],
-          "authors": paper.metadata["authors"],
-          "abstract": paper.metadata["abstract"],
-          "pdf_url": paper.metadata["pdf_url"],
-      }
+  paper = results[0]
+  logger.info(f"Fetched paper: {paper.metadata['title']}")
+
+  return {
+      "title": paper.metadata["title"],
+      "authors": paper.metadata["authors"],
+      "abstract": paper.metadata["abstract"],
+      "pdf_url": paper.metadata["pdf_url"],
+  }
 
 
-# The class which explains the paper in plain-language.
-class ExplainNode:
+def explain(paper: Dict[str, Any]) -> str:
   """
   Generates a plain-language explanation of the paper's content.
 
@@ -75,46 +73,54 @@ class ExplainNode:
     Input: paper (Dict[str, Any])
     Output: explanation (str)
   """
-  def __init__(self):
-    self.model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-  def explain(self, paper: Dict[str, Any]) -> str:
-    prompt = [
-      SystemMessage(content="You are an expert academic assistant, specializing in explaining research papers in simple terms."),
-      HumanMessage(content=f"Explain the following research paper in plain language:\n\nTitle: {paper['title']}\n\nAbstract: {paper['abstract']}")
-    ]
+  prompt = [
+    SystemMessage(content="You are an expert academic assistant, specializing in explaining research papers in simple terms."),
+    HumanMessage(content=f"Explain the following research paper in plain language:\n\nTitle: {paper['title']}\n\nAbstract: {paper['abstract']}")
+  ]
 
-    logger.info(f"Generating explanation for paper: {paper['title']}")
-    response = self.model.invoke(prompt)
+  model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-    content = response.content
+  logger.info(f"Generating explanation for paper: {paper['title']}")
+  response = model.invoke(prompt)
 
-    logger.info(f"Explanation generated for paper: {paper['title']}")
-    return content if isinstance(content, str) else str(content)
+  content = response.content
+
+  logger.info(f"Explanation generated for paper: {paper['title']}")
+  return content if isinstance(content, str) else str(content)
 
 
-# The class which answers specific questions about the paper.
-class QANode:
-    def __init__(self):
-        self.model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-    def answer(self, paper: Dict[str, Any], question: str) -> str:
-        prompt = [
-            SystemMessage(content="You are an expert academic assistant, specializing in answering questions about research papers."),
-            HumanMessage(
-                content=(
-                    f"Based on the following research paper, answer the question in simple language:\n\n"
-                    f"Title: {paper['title']}\n\n"
-                    f"Abstract: {paper['abstract']}\n\n"
-                    f"Question: {question}"
-                )
-            ),
-        ]
+def answer(paper: Dict[str, Any], question: str) -> str:
+  """
+  Answers a user question based on the paper's content.
+  IO:
+    Input: paper (Dict[str, Any]), question (str)
+    Output: answer (str)
 
-        logger.info(f"Answering question for paper: {paper['title']}")
-        response = self.model.invoke(prompt)
+  Args:
+    paper (Dict[str, Any]): The paper details including title and abstract.
+    question (str): The user's question about the paper.
+  """
 
-        content = response.content
-        logger.info(f"Answer generated for paper: {paper['title']}")
-        return content if isinstance(content, str) else str(content)
+  prompt = [
+      SystemMessage(content="You are an expert academic assistant, specializing in answering questions about research papers."),
+      HumanMessage(
+          content=(
+              f"Based on the following research paper, answer the question in simple language:\n\n"
+              f"Title: {paper['title']}\n\n"
+              f"Abstract: {paper['abstract']}\n\n"
+              f"Question: {question}"
+          )
+      ),
+  ]
+
+  model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+  logger.info(f"Answering question for paper: {paper['title']}")
+  response = model.invoke(prompt)
+
+  content = response.content
+  logger.info(f"Answer generated for paper: {paper['title']}")
+  return content if isinstance(content, str) else str(content)
 

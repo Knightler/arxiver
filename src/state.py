@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, TypedDict
 from langgraph.graph import StateGraph
-from graph import FetchNode, ExplainNode, QANode
+from graph import fetch, explain, answer
 
 # Define the state structure
 class State(TypedDict, total=False):
@@ -22,19 +22,16 @@ class State(TypedDict, total=False):
 app = StateGraph(State)
 
 # Define nodes
-fetchnode = FetchNode()
 app.add_node("fetch",
-             lambda state: {'paper': fetchnode.fetch(state["paper_title"])})
+             lambda state: {'paper': fetch(state["paper_title"])})
 
-explainnode = ExplainNode()
 app.add_node("explain",
-             lambda state: {'explanations': explainnode.explain(state["paper"])})
+             lambda state: {'explanations': explain(state["paper"])})
 
-qanode = QANode()
 app.add_node("qa",
              lambda state: {
                  'answers': {
-                     q: qanode.answer(state["paper"], q)
+                     q: answer(state["paper"], q)
                       for q in state["questions"]
                  }})
 
